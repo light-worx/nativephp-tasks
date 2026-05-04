@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Lightworx\TasksApiClient\TasksApiClient;
+use Lightworx\TasksApiClient\DTO\TaskData;
 
 class TaskController extends Controller
 {
@@ -18,35 +19,21 @@ class TaskController extends Controller
 
     public function index(Request $request): View
     {
-        $filter    = $request->get('filter', 'all');  // all | pending | completed
-        $priority  = $request->get('priority');
-        $search    = $request->get('search');
-        $page      = (int) $request->get('page', 1);
-
-        $params = [
-            'page'     => $page,
-            'per_page' => 20,
-        ];
-
-        if ($filter === 'pending') {
-            $params['completed'] = 0;
-        } elseif ($filter === 'completed') {
-            $params['completed'] = 1;
-        }
-
-        if ($priority) {
-            $params['priority'] = $priority;
-        }
-
-        if ($search) {
-            $params['search'] = $search;
-        }
+        $filter = $request->get('filter', 'all'); // all | pending | completed
+        $page   = (int) $request->get('page', 1);
 
         try {
-            $response = $this->client->tasks()->paginate($params);
-            $tasks    = $response['data']         ?? $response;
-            $total    = $response['total']        ?? count($tasks);
-            $lastPage = $response['last_page']    ?? 1;
+            $query = $this->client->tasks();
+
+            if (in_array($filter, ['pending', 'completed'])) {
+                $query->whereStatus($filter);
+            }
+
+            $response = $query->latest()->paginate(20);
+            $tasks    = $response['data'] ?? [];
+            $meta     = $response['meta'] ?? [];
+            $total    = $meta['total']     ?? count($tasks);
+            $lastPage = $meta['last_page'] ?? 1;
         } catch (\Throwable $e) {
             $tasks    = [];
             $total    = 0;
@@ -54,7 +41,7 @@ class TaskController extends Controller
             session()->flash('error', 'Could not load tasks: ' . $e->getMessage());
         }
 
-        return view('tasks.index', compact('tasks', 'total', 'filter', 'priority', 'search', 'page', 'lastPage'));
+        return view('tasks.index', compact('tasks', 'total', 'filter', 'page', 'lastPage'));
     }
 
     // -------------------------------------------------------------------------
@@ -69,11 +56,12 @@ class TaskController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'priority'    => 'nullable|in:low,medium,high',
-            'category'    => 'nullable|string|max:100',
-            'due_date'    => 'nullable|date',
+            'title'          => 'required|string|max:255',
+            'description'    => 'nullable|string',
+            'assigned_email' => 'nullable|email',
+            'status'         => 'nullable|string',
+            'project_id'     => 'nullable|string',
+            'due_at'         => 'nullable|date',
         ]);
 
         try {
@@ -91,10 +79,11 @@ class TaskController extends Controller
     // Edit
     // -------------------------------------------------------------------------
 
-    public function edit(int $id): View
+    public function edit(string $id): View
     {
         try {
-            $task = $this->client->tasks()->find($id);
+            $raw  = $this->client->http()->get("/api/tasks/{$id}")->json();
+            $task = TaskData::fromArray($raw);
         } catch (\Throwable $e) {
             session()->flash('error', 'Task not found.');
             return redirect()->route('tasks.index');
@@ -103,19 +92,16 @@ class TaskController extends Controller
         return view('tasks.edit', compact('task'));
     }
 
-    public function update(Request $request, int $id)
+    public function update(Request $request, string $id)
     {
         $validated = $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'priority'    => 'nullable|in:low,medium,high',
-            'category'    => 'nullable|string|max:100',
-            'due_date'    => 'nullable|date',
-            'completed'   => 'nullable|boolean',
+            'title'          => 'required|string|max:255',
+            'description'    => 'nullable|string',
+            'assigned_email' => 'nullable|email',
+            'status'         => 'nullable|string',
+            'project_id'     => 'nullable|string',
+            'due_at'         => 'nullable|date',
         ]);
-
-        // Checkbox sends "1" when checked, nothing when unchecked
-        $validated['completed'] = $request->boolean('completed');
 
         try {
             $this->client->tasks()->update($id, $validated);
@@ -129,16 +115,18 @@ class TaskController extends Controller
     }
 
     // -------------------------------------------------------------------------
-    // Toggle complete (quick action)
+    // Toggle status (pending <-> completed)
     // -------------------------------------------------------------------------
 
-    public function toggle(int $id)
+    public function toggle(string $id)
     {
         try {
-            $task = $this->client->tasks()->find($id);
-            $this->client->tasks()->update($id, ['completed' => ! $task['completed']]);
+            $raw      = $this->client->http()->get("/api/tasks/{$id}")->json();
+            $task     = TaskData::fromArray($raw);
+            $newStatus = $task->status === 'completed' ? 'pending' : 'completed';
+            $this->client->tasks()->update($id, ['status' => $newStatus]);
         } catch (\Throwable $e) {
-            session()->flash('error', 'Could not toggle task: ' . $e->getMessage());
+            session()->flash('error', 'Could not update task: ' . $e->getMessage());
         }
 
         return back();
@@ -148,7 +136,7 @@ class TaskController extends Controller
     // Delete
     // -------------------------------------------------------------------------
 
-    public function destroy(int $id)
+    public function destroy(string $id)
     {
         try {
             $this->client->tasks()->delete($id);
