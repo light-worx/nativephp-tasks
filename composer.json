@@ -10,6 +10,7 @@
         "laravel/framework": "^13.0",
         "laravel/tinker": "^3.0",
         "nativephp/mobile": "^3.2",
+        "endroid/qrcode": "4.*",
         "light-worx/tasks-api-client": "dev-master"
     },
     "require-dev": {

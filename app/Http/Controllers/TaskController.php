@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 use Lightworx\TasksApiClient\TasksApiClient;
 use Lightworx\TasksApiClient\DTO\TaskData;
@@ -14,18 +16,39 @@ class TaskController extends Controller
     ) {}
 
     // -------------------------------------------------------------------------
+    // Fetch statuses from the API (cached for 1 hour)
+    // Returns a keyed array: ['pending' => ['label' => 'Pending', 'color' => '#f59e0b'], ...]
+    // -------------------------------------------------------------------------
+
+    private function statusMap(): array
+    {
+        try {
+            return Cache::remember('tasks_ui.status_map', 3600, function () {
+                $statuses = $this->client->meta()->statuses();
+                return collect($statuses)->keyBy('label')->toArray();
+            });
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+    // -------------------------------------------------------------------------
     // List
     // -------------------------------------------------------------------------
 
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
-        $filter = $request->get('filter', 'all'); // all | pending | completed
-        $page   = (int) $request->get('page', 1);
+        if (empty(config('tasks-api.client_id')) || empty(config('tasks-api.client_secret'))) {
+            session()->flash('error', 'Please configure your API credentials.');
+            return redirect()->route('settings');
+        }
+        $filter   = $request->get('filter', 'all');
+        $page     = (int) $request->get('page', 1);
+        $statuses = $this->statusMap();
 
         try {
             $query = $this->client->tasks();
 
-            if (in_array($filter, ['pending', 'completed'])) {
+            if ($filter !== 'all' && isset($statuses[$filter])) {
                 $query->whereStatus($filter);
             }
 
@@ -40,8 +63,7 @@ class TaskController extends Controller
             $lastPage = 1;
             session()->flash('error', 'Could not load tasks: ' . $e->getMessage());
         }
-
-        return view('tasks.index', compact('tasks', 'total', 'filter', 'page', 'lastPage'));
+        return view('tasks.index', compact('tasks', 'total', 'filter', 'page', 'lastPage', 'statuses'));
     }
 
     // -------------------------------------------------------------------------
@@ -50,7 +72,8 @@ class TaskController extends Controller
 
     public function create(): View
     {
-        return view('tasks.create');
+        $statuses = $this->statusMap();
+        return view('tasks.create', compact('statuses'));
     }
 
     public function store(Request $request)
@@ -79,7 +102,7 @@ class TaskController extends Controller
     // Edit
     // -------------------------------------------------------------------------
 
-    public function edit(string $id): View
+    public function edit(string $id): View|RedirectResponse
     {
         try {
             $raw  = $this->client->http()->get("/api/tasks/{$id}")->json();
@@ -89,7 +112,8 @@ class TaskController extends Controller
             return redirect()->route('tasks.index');
         }
 
-        return view('tasks.edit', compact('task'));
+        $statuses = $this->statusMap();
+        return view('tasks.edit', compact('task', 'statuses'));
     }
 
     public function update(Request $request, string $id)
@@ -115,7 +139,7 @@ class TaskController extends Controller
     }
 
     // -------------------------------------------------------------------------
-    // Toggle status (pending <-> completed)
+    // Toggle status — cycles to next status in sort_order
     // -------------------------------------------------------------------------
 
     public function toggle(string $id)
@@ -123,8 +147,20 @@ class TaskController extends Controller
         try {
             $raw      = $this->client->http()->get("/api/tasks/{$id}")->json();
             $task     = TaskData::fromArray($raw);
-            $newStatus = $task->status === 'completed' ? 'pending' : 'completed';
-            $this->client->tasks()->update($id, ['status' => $newStatus]);
+            $statuses = $this->statusMap();
+
+            // Build an ordered list of status IDs by sort_order
+            $ordered = collect($statuses)
+                ->sortBy(fn($s) => $s['sort_order'] ?? 0)
+                ->keys()
+                ->values();
+
+            $currentIndex = $ordered->search($task->status);
+            $nextStatus   = $ordered->get(
+                $currentIndex === false ? 0 : ($currentIndex + 1) % $ordered->count()
+            );
+
+            $this->client->tasks()->update($id, ['status' => $nextStatus]);
         } catch (\Throwable $e) {
             session()->flash('error', 'Could not update task: ' . $e->getMessage());
         }

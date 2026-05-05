@@ -10,8 +10,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Load saved API credentials from SecureStorage into the tasks-api config
-        // so the SDK's singleton picks them up on first resolution.
         if (class_exists(\Native\Mobile\Facades\SecureStorage::class)) {
             try {
                 $url    = \Native\Mobile\Facades\SecureStorage::get('tasks_api_url');
@@ -22,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
                 if ($id)     config(['tasks-api.client_id'     => $id]);
                 if ($secret) config(['tasks-api.client_secret' => $secret]);
             } catch (\Throwable) {
-                // SecureStorage unavailable outside NativePHP context — safe to ignore.
+                // SecureStorage unavailable — credentials must be entered via Settings
             }
         }
     }

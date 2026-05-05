@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 use Native\Mobile\Facades\SecureStorage;
 
@@ -25,11 +26,11 @@ class SettingsController extends Controller
             'client_secret' => 'nullable|string',
         ]);
 
-        SecureStorage::put('tasks_api_url',   $request->api_url);
-        SecureStorage::put('tasks_client_id', $request->client_id);
+        SecureStorage::set('tasks_api_url',   $request->api_url);
+        SecureStorage::set('tasks_client_id', $request->client_id);
 
         if ($request->filled('client_secret')) {
-            SecureStorage::put('tasks_client_secret', $request->client_secret);
+            SecureStorage::set('tasks_client_secret', $request->client_secret);
         }
 
         // Update runtime config so the already-bound TasksApiClient picks up new values
@@ -43,7 +44,16 @@ class SettingsController extends Controller
         }
 
         session()->flash('success', 'Settings saved.');
+        // Rebind the singleton with fresh credentials so it takes effect immediately
+        app()->singleton(\Lightworx\TasksApiClient\TasksApiClient::class, function () {
+            return new \Lightworx\TasksApiClient\TasksApiClient(config('tasks-api'));
+        });
 
-        return redirect()->route('settings');
+        // Clear cached token and statuses so they are re-fetched with new credentials
+        Cache::forget('tasks_ui.status_map');
+        Cache::flush();
+
+        session()->flash('success', 'Settings saved.');
+        return redirect()->route('tasks.index');
     }
 }

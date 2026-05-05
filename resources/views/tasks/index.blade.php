@@ -2,100 +2,86 @@
 
 @section('title', 'My Tasks')
 
+@section('header-actions')
+    <a href="{{ route('tasks.create') }}" class="p-2 rounded-full hover:bg-white/20">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+    </a>
+@endsection
+
 @section('content')
 <div class="px-4 pt-4 space-y-3">
 
     {{-- Filter tabs --}}
-    <div class="flex gap-2 overflow-x-auto pb-1">
-        @foreach(['all' => 'All', 'pending' => 'Pending', 'completed' => 'Done'] as $key => $label)
-            <a href="{{ route('tasks.index', array_merge(request()->except('filter', 'page'), ['filter' => $key])) }}"
-               class="flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium
-                      {{ $filter === $key
-                           ? 'bg-brand text-white shadow'
-                           : 'bg-white text-gray-600 border border-gray-200' }}">
+    <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
+
+        <a href="{{ route('tasks.index', ['filter' => 'all']) }}"
+           style="flex-shrink:0; padding:6px 16px; border-radius:999px; font-size:14px; font-weight:500; text-decoration:none;
+                  {{ $filter === 'all'
+                      ? 'background-color:#6366f1; color:#fff;'
+                      : 'background-color:#fff; color:#374151; border:1px solid #e5e7eb;' }}">
+            All
+        </a>
+
+        @foreach($statuses as $label => $status)
+            <a href="{{ route('tasks.index', ['filter' => $label]) }}"
+               style="flex-shrink:0; padding:6px 16px; border-radius:999px; font-size:14px; font-weight:500; text-decoration:none;
+                      {{ $filter === $label
+                          ? 'background-color:' . $status['colour'] . '; color:#fff;'
+                          : 'background-color:#fff; color:#374151; border:1px solid #e5e7eb;' }}">
                 {{ $label }}
             </a>
         @endforeach
+
     </div>
 
-    <p class="text-xs text-gray-500">{{ $total }} task{{ $total === 1 ? '' : 's' }}</p>
+    <p style="font-size:12px; color:#6b7280;">{{ $total }} task{{ $total === 1 ? '' : 's' }}</p>
 
-    {{-- Task list --}}
     @forelse($tasks as $task)
-        <div class="bg-white rounded-2xl shadow-sm border-l-4
-                    {{ $task->status === 'completed' ? 'border-l-green-400' : 'border-l-indigo-400' }}
-                    flex items-start gap-3 p-4">
+        @php $statusColour = $statuses[$task->status]['colour'] ?? '#e5e7eb'; @endphp
 
-            {{-- Toggle button --}}
-            <form method="POST" action="{{ route('tasks.toggle', $task->id) }}">
+        <div style="display:flex; align-items:flex-start; gap:12px;">
+
+            {{-- Toggle --}}
+            <form method="POST" action="{{ route('tasks.toggle', $task->id) }}" style="margin-top:16px; flex-shrink:0;">
                 @csrf
                 <button type="submit"
-                        class="mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0
-                               {{ $task->status === 'completed'
-                                    ? 'bg-green-500 border-green-500'
-                                    : 'border-gray-300' }}">
-                    @if($task->status === 'completed')
-                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                        </svg>
-                    @endif
+                        style="width:24px; height:24px; border-radius:50%; border:2px solid {{ $statusColour }};
+                               background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                    <span style="width:10px; height:10px; border-radius:50%; background-color:{{ $statusColour }};"></span>
                 </button>
             </form>
 
-            {{-- Task body --}}
-            <div class="flex-1 min-w-0">
-                <p class="font-medium text-sm leading-snug
-                          {{ $task->status === 'completed' ? 'line-through text-gray-400' : '' }}">
-                    {{ $task->title }}
-                </p>
+            {{-- Card --}}
+            <a href="{{ route('tasks.edit', $task->id) }}"
+               style="flex:1; background:#fff; border-radius:16px; box-shadow:0 1px 3px rgba(0,0,0,0.08);
+                      border-left:4px solid {{ $statusColour }}; padding:16px; display:block; text-decoration:none; color:inherit;">
+
+                <p style="font-weight:600; font-size:14px; color:#111827; margin:0;">{{ $task->title }}</p>
 
                 @if($task->description)
-                    <p class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ $task->description }}</p>
+                    <p style="font-size:12px; color:#9ca3af; margin:4px 0 0; overflow:hidden;
+                               display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">
+                        {{ $task->description }}
+                    </p>
                 @endif
 
-                <div class="flex flex-wrap gap-2 mt-1.5">
-                    @if($task->due_at)
-                        <span class="text-xs text-gray-500 flex items-center gap-1">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                            {{ \Carbon\Carbon::parse($task->due_at)->format('d M Y') }}
-                        </span>
-                    @endif
+                @if($task->due_at)
+                    <p style="font-size:12px; color:#6b7280; margin:6px 0 0;">
+                        📅 {{ \Carbon\Carbon::parse($task->due_at)->format('d M Y') }}
+                    </p>
+                @endif
 
-                    @if($task->status)
-                        <span class="text-xs rounded-full px-2 py-0.5
-                                     {{ $task->status === 'completed'
-                                          ? 'bg-green-100 text-green-700'
-                                          : 'bg-yellow-100 text-yellow-700' }}">
-                            {{ ucfirst($task->status) }}
-                        </span>
-                    @endif
-                </div>
-            </div>
-
-            {{-- Edit --}}
-            <a href="{{ route('tasks.edit', $task->id) }}"
-               class="text-gray-400 hover:text-brand p-1 flex-shrink-0">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
-                             m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
             </a>
 
         </div>
     @empty
-        <div class="text-center py-16 text-gray-400">
-            <svg class="w-16 h-16 mx-auto mb-4 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
-                         M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-            <p class="text-lg font-medium text-gray-500">No tasks found</p>
+        <div style="text-align:center; padding:64px 0; color:#9ca3af;">
+            <p style="font-size:18px; font-weight:500; color:#6b7280;">No tasks here</p>
             <a href="{{ route('tasks.create') }}"
-               class="mt-4 inline-block bg-brand text-white rounded-xl px-6 py-2 text-sm font-medium">
+               style="display:inline-block; margin-top:16px; background:#6366f1; color:#fff;
+                      border-radius:12px; padding:8px 24px; font-size:14px; font-weight:500; text-decoration:none;">
                 Create your first task
             </a>
         </div>
@@ -103,15 +89,17 @@
 
     {{-- Pagination --}}
     @if($lastPage > 1)
-        <div class="flex justify-center gap-2 py-4">
+        <div style="display:flex; justify-content:center; gap:8px; padding:16px 0;">
             @if($page > 1)
                 <a href="{{ route('tasks.index', array_merge(request()->query(), ['page' => $page - 1])) }}"
-                   class="px-4 py-2 rounded-xl bg-white border text-sm text-gray-600">← Prev</a>
+                   style="padding:8px 16px; border-radius:12px; background:#fff; border:1px solid #e5e7eb;
+                          font-size:14px; color:#374151; text-decoration:none;">← Prev</a>
             @endif
-            <span class="px-4 py-2 text-sm text-gray-500">{{ $page }} / {{ $lastPage }}</span>
+            <span style="padding:8px 16px; font-size:14px; color:#6b7280;">{{ $page }} / {{ $lastPage }}</span>
             @if($page < $lastPage)
                 <a href="{{ route('tasks.index', array_merge(request()->query(), ['page' => $page + 1])) }}"
-                   class="px-4 py-2 rounded-xl bg-white border text-sm text-gray-600">Next →</a>
+                   style="padding:8px 16px; border-radius:12px; background:#fff; border:1px solid #e5e7eb;
+                          font-size:14px; color:#374151; text-decoration:none;">Next →</a>
             @endif
         </div>
     @endif
