@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
+use Native\Mobile\Facades\SecureStorage;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -10,18 +12,23 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if (class_exists(\Native\Mobile\Facades\SecureStorage::class)) {
+        Log::info('boot start', ['time' => microtime(true)]);
+        if (class_exists(SecureStorage::class)) {
             try {
-                $url    = \Native\Mobile\Facades\SecureStorage::get('tasks_api_url');
-                $id     = \Native\Mobile\Facades\SecureStorage::get('tasks_client_id');
-                $secret = \Native\Mobile\Facades\SecureStorage::get('tasks_client_secret');
+                $url    = SecureStorage::get('tasks_api_url');
+                $id     = SecureStorage::get('tasks_client_id');
+                $secret = SecureStorage::get('tasks_client_secret');
+                $email  = SecureStorage::get('tasks_default_email') ?? env('TASKS_DEFAULT_EMAIL');
 
                 if ($url)    config(['tasks-api.base_url'      => $url]);
                 if ($id)     config(['tasks-api.client_id'     => $id]);
                 if ($secret) config(['tasks-api.client_secret' => $secret]);
+                if ($email)  config(['tasks.default_email'     => $email]);
+
             } catch (\Throwable) {
-                // SecureStorage unavailable — credentials must be entered via Settings
+                // SecureStorage unavailable outside NativePHP context — safe to ignore.
             }
         }
+        Log::info('boot end', ['time' => microtime(true)]);
     }
 }

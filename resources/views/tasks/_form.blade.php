@@ -51,17 +51,6 @@
 </div>
 @endif
 
-{{-- Assigned email --}}
-<div>
-    <label class="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
-    <input type="email"
-           name="assigned_email"
-           value="{{ old('assigned_email', $task?->assigned_email ?? '') }}"
-           placeholder="user@example.com"
-           class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm shadow-sm
-                  focus:outline-none focus:ring-2 focus:ring-brand">
-</div>
-
 {{-- Project ID --}}
 <div>
     <label class="block text-sm font-medium text-gray-700 mb-1">Project ID</label>

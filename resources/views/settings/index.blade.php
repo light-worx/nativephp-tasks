@@ -22,6 +22,7 @@
             </label>
             <input type="url"
                    name="api_url"
+                   autocomplete="off"
                    value="{{ old('api_url', $apiUrl) }}"
                    required
                    placeholder="https://tasks.example.com"
@@ -38,6 +39,7 @@
             </label>
             <input type="text"
                    name="client_id"
+                   autocomplete="off"
                    value="{{ old('client_id', $clientId) }}"
                    required
                    placeholder="Your API client ID"
@@ -54,10 +56,25 @@
             </label>
             <input type="password"
                    name="client_secret"
+                   autocomplete="new-password"
                    placeholder="{{ $hasSecret ? '••••••••  (leave blank to keep)' : 'Enter your client secret' }}"
                    style="width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:10px 14px;
                           font-size:14px; background:#f9fafb; box-sizing:border-box;">
             <p style="font-size:11px; color:#9ca3af; margin:6px 0 0;">Stored securely in the device keystore.</p>
+        </div>
+
+        <div style="padding:16px;">
+            <label style="display:block; font-size:13px; font-weight:500; color:#374151; margin-bottom:6px;">
+                Assign tasks to this email
+            </label>
+            <input type="email"
+                name="default_email"
+                autocomplete="email"
+                value="{{ old('default_email', $defaultEmail) }}"
+                placeholder="your@email.com"
+                style="width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:10px 14px;
+                        font-size:14px; background:#f9fafb; box-sizing:border-box;">
+            <p style="font-size:11px; color:#9ca3af; margin:6px 0 0;">Automatically assigned to all new tasks.</p>
         </div>
 
     </div>
@@ -69,9 +86,5 @@
     </button>
 
 </form>
-
-<div style="text-align:center; padding:24px 16px; font-size:12px; color:#9ca3af;">
-    Tasks for Android · Powered by NativePHP
-</div>
 
 @endsection

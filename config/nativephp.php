@@ -39,6 +39,15 @@ return [
         ],
     ],
 
+    'cleanup_env_keys' => [
+        'AWS_*',
+        'DO_SPACES_*',
+        'NATIVEPHP_UPDATER_PATH',
+        'NATIVEPHP_APPLE_ID',
+        'NATIVEPHP_APPLE_ID_PASS',
+        'NATIVEPHP_APPLE_TEAM_ID',
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Permissions
