@@ -7,7 +7,7 @@
 <form method="POST" action="{{ route('tasks.store') }}" class="px-4 py-5 space-y-4">
     @csrf
 
-    @include('tasks._form', ['task' => null, 'statuses' => $statuses])
+    @include('tasks._form', ['task' => null, 'statuses' => $statuses, 'projects' => $projects])
 
     <button type="submit"
             style="width:100%; background:#6366f1; color:#fff; font-weight:600; border:none;
