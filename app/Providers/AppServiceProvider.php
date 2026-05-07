@@ -12,7 +12,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Log::info('boot start', ['time' => microtime(true)]);
         if (class_exists(SecureStorage::class)) {
             try {
                 $url    = SecureStorage::get('tasks_api_url');
@@ -29,6 +28,5 @@ class AppServiceProvider extends ServiceProvider
                 // SecureStorage unavailable outside NativePHP context — safe to ignore.
             }
         }
-        Log::info('boot end', ['time' => microtime(true)]);
     }
 }

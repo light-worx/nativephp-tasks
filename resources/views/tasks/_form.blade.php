@@ -51,16 +51,41 @@
 </div>
 @endif
 
-{{-- Project ID --}}
+{{-- Project --}}
+@if(!empty($projects))
 <div>
-    <label class="block text-sm font-medium text-gray-700 mb-1">Project ID</label>
+    <label style="display:block; font-size:13px; font-weight:500; color:#374151; margin-bottom:6px;">
+        Project
+    </label>
+    <select name="project_id"
+            style="width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:10px 14px;
+                   font-size:14px; background:#fff; box-sizing:border-box; color:#374151;
+                   appearance:none; -webkit-appearance:none;
+                   background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22none%22><path stroke=%22%236b7280%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M6 8l4 4 4-4%22/></svg>');
+                   background-repeat:no-repeat; background-position:right 12px center; background-size:20px;
+                   padding-right:40px;">
+        <option value="">— No project —</option>
+        @foreach($projects as $projectId => $projectName)
+            <option value="{{ $projectId }}"
+                    {{ old('project_id', $task?->project_id ?? '') === $projectId ? 'selected' : '' }}>
+                {{ $projectName }}
+            </option>
+        @endforeach
+    </select>
+</div>
+@elseif(!empty($task?->project_id))
+{{-- Fallback if projects failed to load but task has one set --}}
+<div>
+    <label style="display:block; font-size:13px; font-weight:500; color:#374151; margin-bottom:6px;">
+        Project ID
+    </label>
     <input type="text"
            name="project_id"
            value="{{ old('project_id', $task?->project_id ?? '') }}"
-           placeholder="Optional project identifier"
-           class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm shadow-sm
-                  focus:outline-none focus:ring-2 focus:ring-brand">
+           style="width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:10px 14px;
+                  font-size:14px; background:#f9fafb; box-sizing:border-box;">
 </div>
+@endif
 
 {{-- Due date --}}
 <div>

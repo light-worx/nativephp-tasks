@@ -51,6 +51,7 @@ class SettingsController extends Controller
         $cacheKey = 'tasks_api_token_' . md5($request->client_id);
         Cache::forget($cacheKey);
         Cache::forget('tasks_ui.status_map');
+        Cache::forget('tasks_ui.project_map');
 
         // Rebind the singleton with fresh config
         app()->singleton(\Lightworx\TasksApiClient\TasksApiClient::class, function () {
