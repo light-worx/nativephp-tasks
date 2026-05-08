@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
-use Lightworx\TasksApiClient\DTO\ProjectData;
 use Lightworx\TasksApiClient\TasksApiClient;
 use Lightworx\TasksApiClient\DTO\TaskData;
 use Lightworx\TasksApiClient\Exceptions\UnauthorizedException;
@@ -34,12 +34,14 @@ class TaskController extends Controller
     {
         try {
             return Cache::remember('tasks_ui.project_map', 3600, function () {
-                $projects = $this->client->projects()->get();
+                $response = $this->client->http()->get('/api/projects')->json();
+                $projects = is_array($response) && isset($response[0]) ? $response : ($response['data'] ?? []);
                 return collect($projects)
-                    ->mapWithKeys(fn(ProjectData $p) => [$p->id => $p->name])
+                    ->mapWithKeys(fn($p) => [$p['id'] => $p['name']])
                     ->toArray();
             });
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Log::error('projectMap failed', ['error' => $e->getMessage()]);
             return [];
         }
     }
@@ -82,6 +84,10 @@ class TaskController extends Controller
                 $query->whereAssignedTo($this->assignedEmail());
             }
 
+            if ($request->filled('project_id')) {
+                $query->whereProject($request->project_id);
+            }
+
             if ($filter !== 'all') {
                 $query->whereStatus($filter);
             }
@@ -113,11 +119,12 @@ class TaskController extends Controller
     // Create
     // -------------------------------------------------------------------------
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        $statuses = $this->statusMap();
-        $projects = $this->projectMap();
-        return view('tasks.create', compact('statuses', 'projects'));
+        $statuses       = $this->statusMap();
+        $projects       = $this->projectMap();
+        $preselectedProject = $request->get('project_id');
+        return view('tasks.create', compact('statuses', 'projects', 'preselectedProject'));
     }
 
     public function store(Request $request)

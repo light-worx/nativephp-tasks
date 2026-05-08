@@ -1,5 +1,8 @@
 {{-- Usage: @include('tasks._form', ['task' => $task ?? null, 'statuses' => $statuses]) --}}
-@php $task = $task ?? null; @endphp
+@php 
+    $task = $task ?? null;
+    $preselectedProject = $preselectedProject ?? null;
+@endphp
 
 {{-- Title --}}
 <div>
@@ -33,7 +36,8 @@
     <div class="flex flex-wrap gap-2" id="status-options">
         @foreach($statuses as $id => $status)
             @php
-                $selected = old('status', $task?->status ?? array_key_first($statuses)) === $id;
+                $currentStatus = old('status', $task?->status ?? array_key_first($statuses ?? []));
+                $selected = $currentStatus === $id;
                 $color    = $status['colour'] ?? '#6366f1';
             @endphp
             <label class="cursor-pointer status-label" data-color="{{ $color }}">
@@ -57,6 +61,9 @@
     <label style="display:block; font-size:13px; font-weight:500; color:#374151; margin-bottom:6px;">
         Project
     </label>
+    @php
+        $selectedProject = old('project_id', $task?->project_id ?? $preselectedProject ?? '');
+    @endphp
     <select name="project_id"
             style="width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:10px 14px;
                    font-size:14px; background:#fff; box-sizing:border-box; color:#374151;
@@ -67,7 +74,7 @@
         <option value="">— No project —</option>
         @foreach($projects as $projectId => $projectName)
             <option value="{{ $projectId }}"
-                    {{ old('project_id', $task?->project_id ?? '') === $projectId ? 'selected' : '' }}>
+                    {{ (string) $selectedProject === (string) $projectId ? 'selected' : '' }}>
                 {{ $projectName }}
             </option>
         @endforeach
