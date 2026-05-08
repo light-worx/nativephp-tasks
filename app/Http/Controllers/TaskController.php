@@ -142,6 +142,7 @@ class TaskController extends Controller
         try {
             $this->client->tasks()->create($validated);
             session()->flash('success', 'Task created!');
+            Cache::forget('tasks_ui.project_map');
         } catch (ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (UnauthorizedException $e) {
@@ -199,6 +200,7 @@ class TaskController extends Controller
             $this->client->http()
                 ->put("/api/tasks/{$id}?assigned_email=" . urlencode($this->assignedEmail()), $validated);
             session()->flash('success', 'Task updated!');
+            Cache::forget('tasks_ui.project_map');
         } catch (ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (ForbiddenException $e) {
@@ -222,6 +224,7 @@ class TaskController extends Controller
             $this->client->http()
                 ->delete("/api/tasks/{$id}?assigned_email=" . urlencode($this->assignedEmail()));
             session()->flash('success', 'Task deleted.');
+            Cache::forget('tasks_ui.project_map');
         } catch (ForbiddenException $e) {
             session()->flash('error', 'You do not have permission to delete this task.');
         } catch (\Throwable $e) {

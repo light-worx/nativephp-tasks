@@ -17,14 +17,22 @@
                           border-left:4px solid #6366f1; padding:16px; display:block;
                           text-decoration:none; color:inherit;">
 
-                    <p style="font-weight:600; font-size:15px; color:#111827; margin:0;">
-                        {{ $project['name'] }}
-                    </p>
+                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                        <p style="font-weight:600; font-size:15px; color:#111827; margin:0;">
+                            {{ $project['name'] }}
+                        </p>
+                        <span style="background:#ede9fe; color:#6366f1; font-size:12px; font-weight:600;
+                                     border-radius:999px; padding:2px 10px; flex-shrink:0; margin-left:8px;">
+                            {{ $project['task_count'] ?? 0 }} task{{ ($project['task_count'] ?? 0) === 1 ? '' : 's' }}
+                        </span>
+                    </div>
+
                     @if(!empty($project['description']))
                         <p style="font-size:13px; color:#9ca3af; margin:4px 0 0;">
                             {{ $project['description'] }}
                         </p>
                     @endif
+
                 </a>
             @endforeach
         </div>
